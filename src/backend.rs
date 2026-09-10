@@ -258,11 +258,10 @@ fn create_tar(input: &Path, output: &Path) -> Result<()> {
     Ok(())
 }
 
-fn extract_tar(input: &Path, output: &Path) -> Result<()> {
+fn extract_tar_with<R: Read>(reader: R, output: &Path) -> Result<()> {
     fs::create_dir_all(output)?;
 
-    let file = File::open(input)?;
-    let mut archive = Archive::new(file);
+    let mut archive = Archive::new(reader);
 
     for entry in archive.entries()? {
         let mut entry = entry?;
@@ -279,9 +278,12 @@ fn extract_tar(input: &Path, output: &Path) -> Result<()> {
     Ok(())
 }
 
-pub fn preview_tar(input: &Path) -> Result<Vec<ArchiveEntry>> {
-    let file = File::open(input)?;
-    let mut archive = Archive::new(file);
+fn extract_tar(input: &Path, output: &Path) -> Result<()> {
+    extract_tar_with(File::open(input)?, output)
+}
+
+pub fn preview_tar_with<R: Read>(reader: R) -> Result<Vec<ArchiveEntry>> {
+    let mut archive = Archive::new(reader);
 
     let mut entries = Vec::new();
 
@@ -296,6 +298,10 @@ pub fn preview_tar(input: &Path) -> Result<Vec<ArchiveEntry>> {
     }
 
     Ok(entries)
+}
+
+pub fn preview_tar(input: &Path) -> Result<Vec<ArchiveEntry>> {
+    preview_tar_with(File::open(input)?)
 }
 
 /* GZIP */
@@ -377,44 +383,13 @@ fn create_tar_gz(input: &Path, output: &Path) -> Result<()> {
 }
 
 fn extract_tar_gz(input: &Path, output: &Path) -> Result<()> {
-    fs::create_dir_all(output)?;
-
     let file = File::open(input)?;
-    let decoder = GzDecoder::new(file);
-    let mut archive = Archive::new(decoder);
-
-    for entry in archive.entries()? {
-        let mut entry = entry?;
-        let path = entry.path()?.to_path_buf();
-        let dest = safe_join(output, &path)?;
-
-        if let Some(p) = dest.parent() {
-            fs::create_dir_all(p)?;
-        }
-
-        entry.unpack(dest)?;
-    }
-
-    Ok(())
+    extract_tar_with(GzDecoder::new(file), output)
 }
+
 pub fn preview_tar_gz(input: &Path) -> Result<Vec<ArchiveEntry>> {
     let file = File::open(input)?;
-    let decoder = GzDecoder::new(file);
-    let mut archive = Archive::new(decoder);
-
-    let mut entries = Vec::new();
-
-    for entry in archive.entries()? {
-        let entry = entry?;
-
-        let path = entry.path()?.to_path_buf();
-        let is_dir = entry.header().entry_type().is_dir();
-        let size = entry.header().size()?;
-
-        entries.push(ArchiveEntry { path, is_dir, size });
-    }
-
-    Ok(entries)
+    preview_tar_with(GzDecoder::new(file))
 }
 
 /* ZSTD */
@@ -522,44 +497,15 @@ fn create_tar_zst(input: &Path, output: &Path) -> Result<()> {
 }
 
 fn extract_tar_zst(input: &Path, output: &Path) -> Result<()> {
-    fs::create_dir_all(output)?;
-
     let file = File::open(input)?;
     let decoder = zstd::Decoder::new(file)?;
-    let mut archive = Archive::new(decoder);
-
-    for entry in archive.entries()? {
-        let mut entry = entry?;
-        let path = entry.path()?.to_path_buf();
-        let dest = safe_join(output, &path)?;
-
-        if let Some(p) = dest.parent() {
-            fs::create_dir_all(p)?;
-        }
-
-        entry.unpack(dest)?;
-    }
-
-    Ok(())
+    extract_tar_with(decoder, output)
 }
+
 pub fn preview_tar_zst(input: &Path) -> Result<Vec<ArchiveEntry>> {
     let file = File::open(input)?;
     let decoder = zstd::stream::read::Decoder::new(file)?;
-    let mut archive = Archive::new(decoder);
-
-    let mut entries = Vec::new();
-
-    for entry in archive.entries()? {
-        let entry = entry?;
-
-        let path = entry.path()?.to_path_buf();
-        let is_dir = entry.header().entry_type().is_dir();
-        let size = entry.header().size()?;
-
-        entries.push(ArchiveEntry { path, is_dir, size });
-    }
-
-    Ok(entries)
+    preview_tar_with(decoder)
 }
 
 /* 7Z */
