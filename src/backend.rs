@@ -62,14 +62,6 @@ impl From<sevenz_rust::Error> for ArchiveError {
 
 type Result<T> = std::result::Result<T, ArchiveError>;
 
-pub trait ArchiveBackend {
-    fn create(input: &Path, output: &Path) -> Result<()>;
-
-    fn extract(input: &Path, output: &Path) -> Result<()>;
-
-    fn preview(input: &Path) -> Result<()>;
-}
-
 #[derive(Clone, Copy, Debug)]
 enum ArchiveFormat {
     Zip,
@@ -704,8 +696,8 @@ fn make_sevenz_fetcher(input: PathBuf) -> preview::ContentFetcher {
 
 pub struct StandardBackend;
 
-impl ArchiveBackend for StandardBackend {
-    fn create(input: &Path, output: &Path) -> Result<()> {
+impl StandardBackend {
+    pub fn create(input: &Path, output: &Path) -> Result<()> {
         if !input.exists() {
             return Err(ArchiveError::InvalidPath(input.display().to_string()));
         }
@@ -725,7 +717,7 @@ impl ArchiveBackend for StandardBackend {
         Ok(())
     }
 
-    fn extract(input: &Path, output: &Path) -> Result<()> {
+    pub fn extract(input: &Path, output: &Path) -> Result<()> {
         if !input.exists() {
             return Err(ArchiveError::InvalidPath(input.display().to_string()));
         }
@@ -742,7 +734,7 @@ impl ArchiveBackend for StandardBackend {
 
         Ok(())
     }
-    fn preview(input: &Path) -> Result<()> {
+    pub fn preview(input: &Path) -> Result<()> {
         let format = archive_format(input)?;
 
         let (archive_entries, read_content) = match format {
