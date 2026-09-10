@@ -1,9 +1,15 @@
 use clap::Parser;
-mod preview;
 use std::path::Path;
 
 mod backend;
+mod entry;
+mod error;
+mod formats;
+mod preview;
+mod util;
+
 use backend::*;
+use error::ArchiveError;
 
 #[derive(Parser, Debug)]
 #[command(name = "squoze", version, about, long_about = None)]
