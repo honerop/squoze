@@ -1,0 +1,33 @@
+[package]
+name = "squoze"
+version = "0.1.0"
+edition = "2024"
+description = "A lean terminal-first archiver: create, extract and preview zip, tar, tar.gz, tar.zst and 7z archives"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# TUI
+ratatui = "0.29"
+crossterm = "0.28"
+tui-textarea = "0.7"      # For search/input
+
+# Archive formats
+zip = "2.2"               # .zip
+tar = "0.4"               # .tar
+flate2 = "1.0"            # .gz
+zstd = "0.13"             # .zst
+sevenz-rust = "0.6"       # .7z (pure Rust, no 7z.dll)
+
+# Async + parallelism
+tokio = { version = "1", features = ["full"] }
+rayon = "1.10"            # Parallel extraction
+
+# UX
+indicatif = "0.17"        # Fallback CLI progress
+human-panic = "2.0"       # Beautiful crash messages
+
+[dev-dependencies]
+tempfile = "3"

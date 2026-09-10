@@ -1,7 +1,6 @@
-# Rust build artifacts
-/target
+# nix
+result/
+.direnv/
 
-# direnv / nix
-.direnv
-
-
+# build output
+target/
