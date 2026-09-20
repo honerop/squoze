@@ -1,4 +1,4 @@
-use std::{fs, io, io::Write, io::Seek, path::Path, path::PathBuf, sync::Arc};
+use std::{fs, io, io::Seek, io::Write, path::Path, path::PathBuf, sync::Arc};
 
 use sevenz_rust::{SevenZArchiveEntry, SevenZReader, SevenZWriter};
 
@@ -74,27 +74,31 @@ pub fn preview(input: &Path) -> Result<Vec<ArchiveEntry>> {
 pub fn make_fetcher(input: PathBuf) -> ContentFetcher {
     Arc::new(move |path: &Path| {
         let want = normalize_path(path);
-        let mut reader =
-            SevenZReader::new(fs::File::open(&input)?, 1 << 16, sevenz_rust::Password::empty())
-                .map_err(|e| io::Error::other(e.to_string()))?;
+        let mut reader = SevenZReader::new(
+            fs::File::open(&input)?,
+            1 << 16,
+            sevenz_rust::Password::empty(),
+        )
+        .map_err(|e| io::Error::other(e.to_string()))?;
 
         let mut found: Option<Vec<u8>> = None;
 
-        reader.for_each_entries(|entry, data| {
-            if found.is_none()
-                && !entry.is_directory()
-                && normalize_path(Path::new(entry.name())) == want
-            {
-                let mut buf = Vec::new();
-                data.read_to_end(&mut buf)?;
-                found = Some(buf);
+        reader
+            .for_each_entries(|entry, data| {
+                if found.is_none()
+                    && !entry.is_directory()
+                    && normalize_path(Path::new(entry.name())) == want
+                {
+                    let mut buf = Vec::new();
+                    data.read_to_end(&mut buf)?;
+                    found = Some(buf);
 
-                return Ok(false);
-            }
+                    return Ok(false);
+                }
 
-            Ok(true)
-        })
-        .map_err(|e| io::Error::other(e.to_string()))?;
+                Ok(true)
+            })
+            .map_err(|e| io::Error::other(e.to_string()))?;
 
         found.ok_or_else(not_found)
     })

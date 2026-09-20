@@ -1,4 +1,4 @@
-use std::{fs, io, io::Read, io::Write, io::Seek, path::Path, path::PathBuf, sync::Arc};
+use std::{fs, io, io::Read, io::Seek, io::Write, path::Path, path::PathBuf, sync::Arc};
 
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
@@ -99,8 +99,7 @@ pub fn make_fetcher(input: &Path) -> ContentFetcher {
     Arc::new(move |path: &Path| {
         let want = normalize_path(path);
         let file = fs::File::open(&input)?;
-        let mut archive =
-            ZipArchive::new(file).map_err(|e| io::Error::other(e.to_string()))?;
+        let mut archive = ZipArchive::new(file).map_err(|e| io::Error::other(e.to_string()))?;
 
         let mut data = Vec::new();
 

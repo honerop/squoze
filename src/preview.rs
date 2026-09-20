@@ -3,19 +3,14 @@ use crate::entry::{ArchiveEntry, ContentFetcher};
 use crossterm::{
     event::{self, Event, KeyCode, KeyEventKind},
     execute,
-    terminal::{
-        disable_raw_mode,
-        enable_raw_mode,
-        EnterAlternateScreen,
-        LeaveAlternateScreen,
-    },
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use ratatui::{
+    Terminal,
     backend::CrosstermBackend,
     style::{Color, Style, Stylize},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
-    Terminal,
 };
 use std::{io, path::Path, path::PathBuf};
 
@@ -265,10 +260,7 @@ fn human_size(bytes: u64) -> String {
 }
 
 fn row_to_item(row: &Row) -> ListItem<'static> {
-    let mut spans = vec![Span::styled(
-        row.prefix.clone(),
-        Style::new().dim(),
-    )];
+    let mut spans = vec![Span::styled(row.prefix.clone(), Style::new().dim())];
 
     if row.is_dir {
         spans.push(Span::styled(
@@ -326,13 +318,21 @@ fn draw_screen(
     terminal.draw(|frame| {
         if let Some(view) = view {
             let paragraph = Paragraph::new(view.lines.clone())
-                .block(Block::default().title(view.title.clone()).borders(Borders::ALL))
+                .block(
+                    Block::default()
+                        .title(view.title.clone())
+                        .borders(Borders::ALL),
+                )
                 .scroll((view.scroll, 0));
 
             frame.render_widget(paragraph, frame.area());
         } else {
             let list = List::new(items.to_vec())
-                .block(Block::default().title(title.to_string()).borders(Borders::ALL))
+                .block(
+                    Block::default()
+                        .title(title.to_string())
+                        .borders(Borders::ALL),
+                )
                 .highlight_style(Style::new().bg(Color::DarkGray));
 
             let mut state = ListState::default();
@@ -511,10 +511,7 @@ pub fn run_preview(files: Vec<ArchiveEntry>, read_content: ContentFetcher) -> io
 
     disable_raw_mode()?;
 
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen
-    )?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
 
     terminal.show_cursor()?;
 
@@ -522,5 +519,8 @@ pub fn run_preview(files: Vec<ArchiveEntry>, read_content: ContentFetcher) -> io
 }
 
 fn terminal_size_height(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> usize {
-    terminal.size().map(|area| area.height as usize).unwrap_or(10)
+    terminal
+        .size()
+        .map(|area| area.height as usize)
+        .unwrap_or(10)
 }

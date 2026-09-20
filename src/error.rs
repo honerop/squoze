@@ -8,6 +8,7 @@ pub enum ArchiveError {
     UnsupportedFormat(String),
     InvalidPath(String),
     InvalidArguments(String),
+    Serialization(String),
 }
 
 impl std::fmt::Display for ArchiveError {
@@ -24,6 +25,9 @@ impl std::fmt::Display for ArchiveError {
             }
             Self::InvalidArguments(m) => {
                 write!(f, "{m}")
+            }
+            Self::Serialization(m) => {
+                write!(f, "serialization error: {m}")
             }
         }
     }

@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::error::Result;
+use crate::error::{ArchiveError, Result};
 use crate::formats::{self, ArchiveFormat};
 use crate::preview;
 use crate::util::ensure_parent;
@@ -90,15 +90,31 @@ impl StandardBackend {
 
         Ok(())
     }
+    pub fn preview_json(input: &Path) -> Result<()> {
+        let format = formats::archive_format(input)?;
+        let archive_entries = match format {
+            ArchiveFormat::Zip => (formats::zip::preview(input)?,),
+            ArchiveFormat::Tar => (formats::tar::preview(input)?,),
+            ArchiveFormat::Gzip => (formats::gzip::preview(input)?,),
+            ArchiveFormat::TarGzip => (formats::targz::preview(input)?,),
+            ArchiveFormat::Zstd => (formats::zstd::preview(input)?,),
+            ArchiveFormat::TarZstd => (formats::tarzst::preview(input)?,),
+            ArchiveFormat::SevenZip => (formats::sevenz::preview(input)?,),
+        };
+        let json_string = serde_json::to_string(&archive_entries)
+            .map_err(|e| ArchiveError::Serialization(e.to_string()))?;
+        print!("{json_string}");
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::ArchiveError;
     use crate::entry::ArchiveEntry;
-    use crate::formats::{archive_format, sevenz, targz, tarzst, zip, gzip, zstd};
     use crate::formats::tar;
+    use crate::formats::{archive_format, gzip, sevenz, targz, tarzst, zip, zstd};
     use std::fs;
     use std::path::PathBuf;
     use tempfile::TempDir;
@@ -281,19 +297,34 @@ mod tests {
 
         let p = |name: &str| dir.path().join(name);
 
-        assert!(matches!(archive_format(&p("a.zip")), Ok(ArchiveFormat::Zip)));
-        assert!(matches!(archive_format(&p("a.tar")), Ok(ArchiveFormat::Tar)));
+        assert!(matches!(
+            archive_format(&p("a.zip")),
+            Ok(ArchiveFormat::Zip)
+        ));
+        assert!(matches!(
+            archive_format(&p("a.tar")),
+            Ok(ArchiveFormat::Tar)
+        ));
         assert!(matches!(
             archive_format(&p("a.tar.gz")),
             Ok(ArchiveFormat::TarGzip)
         ));
-        assert!(matches!(archive_format(&p("a.tgz")), Ok(ArchiveFormat::TarGzip)));
+        assert!(matches!(
+            archive_format(&p("a.tgz")),
+            Ok(ArchiveFormat::TarGzip)
+        ));
         assert!(matches!(
             archive_format(&p("a.tar.zst")),
             Ok(ArchiveFormat::TarZstd)
         ));
-        assert!(matches!(archive_format(&p("a.gz")), Ok(ArchiveFormat::Gzip)));
-        assert!(matches!(archive_format(&p("a.zst")), Ok(ArchiveFormat::Zstd)));
+        assert!(matches!(
+            archive_format(&p("a.gz")),
+            Ok(ArchiveFormat::Gzip)
+        ));
+        assert!(matches!(
+            archive_format(&p("a.zst")),
+            Ok(ArchiveFormat::Zstd)
+        ));
         assert!(matches!(
             archive_format(&p("a.7z")),
             Ok(ArchiveFormat::SevenZip)
@@ -305,16 +336,7 @@ mod tests {
 mod fetcher_tests {
     use super::*;
     use crate::entry::ContentFetcher;
-    use crate::formats::{
-        archive_format,
-        gzip,
-        sevenz,
-        tar,
-        targz,
-        tarzst,
-        zip,
-        zstd,
-    };
+    use crate::formats::{archive_format, gzip, sevenz, tar, targz, tarzst, zip, zstd};
     use std::fs;
     use tempfile::TempDir;
 
@@ -331,17 +353,17 @@ mod fetcher_tests {
             let output = dir.path().join(format!("project{ext}"));
             StandardBackend::create(&input, &output).unwrap();
 
-            let fetcher: ContentFetcher = match archive_format(&output).unwrap() {
-                ArchiveFormat::Zip => zip::make_fetcher(&output),
-                ArchiveFormat::Tar => tar::make_fetcher(
-                    output.clone(),
-                    |f| Ok(Box::new(f) as Box<dyn std::io::Read>),
-                ),
-                ArchiveFormat::TarGzip => targz::make_fetcher(output.clone()),
-                ArchiveFormat::TarZstd => tarzst::make_fetcher(output.clone()),
-                ArchiveFormat::SevenZip => sevenz::make_fetcher(output.clone()),
-                other => panic!("unexpected: {other:?}"),
-            };
+            let fetcher: ContentFetcher =
+                match archive_format(&output).unwrap() {
+                    ArchiveFormat::Zip => zip::make_fetcher(&output),
+                    ArchiveFormat::Tar => tar::make_fetcher(output.clone(), |f| {
+                        Ok(Box::new(f) as Box<dyn std::io::Read>)
+                    }),
+                    ArchiveFormat::TarGzip => targz::make_fetcher(output.clone()),
+                    ArchiveFormat::TarZstd => tarzst::make_fetcher(output.clone()),
+                    ArchiveFormat::SevenZip => sevenz::make_fetcher(output.clone()),
+                    other => panic!("unexpected: {other:?}"),
+                };
 
             assert_eq!(
                 fetcher(&Path::new("project/README.md")).unwrap(),

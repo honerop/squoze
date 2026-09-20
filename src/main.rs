@@ -19,6 +19,10 @@ struct Args {
     #[arg(short, long)]
     preview: Option<String>,
 
+    /// Preview without writing anything, output as json.
+    #[arg(short, long)]
+    json: Option<String>,
+
     /// Create an archive.
     #[arg(short, long, conflicts_with = "extract")]
     create: Option<String>,
@@ -42,19 +46,25 @@ fn main() {
         &args.extract,
         &args.preview,
         &args.output,
+        &args.json,
     ) {
-        (Some(input), None, None, Some(output)) => {
+        (Some(input), None, None, Some(output), None) => {
             let output = Path::new(output);
             StandardBackend::create(Path::new(input), output)
         }
-        (None, Some(input), None, Some(output)) => {
+        (None, Some(input), None, Some(output), None) => {
             let output = Path::new(output);
             StandardBackend::extract(Path::new(input), output)
         }
-        (None, None, Some(preview_path), None) => {
+        (None, None, Some(preview_path), None, None) => {
             StandardBackend::preview(Path::new(preview_path))
         }
-        (None, None, None, None) => Err(ArchiveError::InvalidArguments(
+
+        (None, None, None, None, Some(preview_path)) => {
+            StandardBackend::preview_json(Path::new(preview_path))
+        }
+
+        (None, None, None, None, None) => Err(ArchiveError::InvalidArguments(
             "Type --help for how to use this cli".into(),
         )),
         _ => unreachable!(),

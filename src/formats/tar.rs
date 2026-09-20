@@ -6,7 +6,10 @@ use crate::entry::{ArchiveEntry, ContentFetcher};
 use crate::error::Result;
 use crate::util::{archive_root_name, normalize_path, not_found, safe_join};
 
-pub(crate) fn add_tar_path<W: std::io::Write>(builder: &mut Builder<W>, input: &Path) -> Result<()> {
+pub(crate) fn add_tar_path<W: std::io::Write>(
+    builder: &mut Builder<W>,
+    input: &Path,
+) -> Result<()> {
     let name = archive_root_name(input);
 
     if input.is_dir() {
