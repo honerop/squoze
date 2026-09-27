@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use crate::entry::ArchiveEntry;
 use crate::error::{ArchiveError, Result};
 use crate::formats::{self, ArchiveFormat};
 use crate::preview;
@@ -91,21 +92,43 @@ impl StandardBackend {
         Ok(())
     }
     pub fn preview_json(input: &Path) -> Result<()> {
-        let format = formats::archive_format(input)?;
-        let archive_entries = match format {
-            ArchiveFormat::Zip => (formats::zip::preview(input)?,),
-            ArchiveFormat::Tar => (formats::tar::preview(input)?,),
-            ArchiveFormat::Gzip => (formats::gzip::preview(input)?,),
-            ArchiveFormat::TarGzip => (formats::targz::preview(input)?,),
-            ArchiveFormat::Zstd => (formats::zstd::preview(input)?,),
-            ArchiveFormat::TarZstd => (formats::tarzst::preview(input)?,),
-            ArchiveFormat::SevenZip => (formats::sevenz::preview(input)?,),
-        };
+        let archive_entries = Self::get_archive_entries(input)?;
         let json_string = serde_json::to_string(&archive_entries)
             .map_err(|e| ArchiveError::Serialization(e.to_string()))?;
         print!("{json_string}");
 
         Ok(())
+    }
+    pub fn preview_text(input: &Path) -> Result<()> {
+        let archive_entries = Self::get_archive_entries(input)?;
+
+        let pretty_entries: String = archive_entries
+            .iter()
+            .map(|v| {
+                format!(
+                    "Path: {}, Directory: {}, Size: {}\n",
+                    v.path.to_string_lossy(),
+                    if v.is_dir { "yes" } else { "no" },
+                    v.size
+                )
+            })
+            .collect();
+        print!("{}", &pretty_entries[0..pretty_entries.len() - 1]);
+
+        Ok(())
+    }
+    fn get_archive_entries(input: &Path) -> Result<Vec<ArchiveEntry>> {
+        let format = formats::archive_format(input)?;
+        let archive_entries = match format {
+            ArchiveFormat::Zip => formats::zip::preview(input)?,
+            ArchiveFormat::Tar => formats::tar::preview(input)?,
+            ArchiveFormat::Gzip => formats::gzip::preview(input)?,
+            ArchiveFormat::TarGzip => formats::targz::preview(input)?,
+            ArchiveFormat::Zstd => formats::zstd::preview(input)?,
+            ArchiveFormat::TarZstd => formats::tarzst::preview(input)?,
+            ArchiveFormat::SevenZip => formats::sevenz::preview(input)?,
+        };
+        Ok(archive_entries)
     }
 }
 

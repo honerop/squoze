@@ -53,6 +53,8 @@ enum Command {
         /// Archive to preview.
         archive: PathBuf,
     },
+    #[command(name = "preview-pretty")]
+    PreviewText { archive: PathBuf },
 }
 
 fn main() {
@@ -66,6 +68,7 @@ fn main() {
         Command::Preview { archive } => StandardBackend::preview(&archive),
 
         Command::PreviewJson { archive } => StandardBackend::preview_json(&archive),
+        Command::PreviewText { archive } => StandardBackend::preview_text(&archive),
     };
 
     if let Err(error) = result {
