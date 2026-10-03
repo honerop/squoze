@@ -49,6 +49,18 @@
           );
       };
 
+      packages = forEachSupportedSystem (
+        { pkgs, ... }: rec {
+          squoze = pkgs.rustPlatform.buildRustPackage {
+            pname = "squoze";
+            version = "0.1.0";
+            src = ./.;
+            cargoLock.lockFile = ./Cargo.lock;
+          };
+          default = squoze;
+        }
+      );
+
       devShells = forEachSupportedSystem (
         { pkgs, system }:
         {
